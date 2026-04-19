@@ -1,3 +1,20 @@
 body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
     background-color: #2E2E84
+}
+
+canvas {
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+
+button {
+    position: relative;
+    z-index: 10;
+    display: block;
+    margin: 10px;
 }

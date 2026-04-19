@@ -1,6 +1,16 @@
 let score = 0;
 let level = 1;
 let lines = 0;
+let popupText = "";
+let popupTimer = 0;
+
+document.getElementById("cuminza").addEventListener("click", () => {
+  resetGame();
+});
+
+document.getElementById("chisiamo").addEventListener("click", () => {
+  showCredits = !showCredits;
+});
 
 function getRandomInt(min, max) {
     min = Math.ceil(min);
@@ -24,7 +34,7 @@ function avantiUnAltro() {
         creaTetrimini();
     }
 
-    const name = pezzoSequence.pop();
+    const name = pezzoSequence.shift();
     const matrix = tetrimini[name];
 
     const col = Math.floor(playfield[0].length / 2 - matrix[0].length / 2);
@@ -72,36 +82,22 @@ function piazzaBlocco() {
     }
   }
 
-  let linesCleared = 0;
+  toBeDelRow = [];
 
-  for (let row = playfield.length - 1; row >= 0; ) {
-
+  for (let row = playfield.length - 1; row >= 0; row--) {
     if (playfield[row].every(cell => cell !== 0)) {
-      for (let r = row; r > 0; r--) {
-        for (let c = 0; c < playfield[r].length; c++) {
-          playfield[r][c] = playfield[r - 1][c];
-        }
-      }
-      for (let c = 0; c < playfield[0].length; c++) {
-        playfield[0][c] = 0;
-      }
-
-      linesCleared++;
-
-    } else {
-      row--;
+      toBeDelRow.push(row);
     }
   }
 
-  if (linesCleared > 0) {
-    const points = [0, 100, 300, 500, 800];
-    score += points[linesCleared] * level;
-    lines += linesCleared;
-
-    level = Math.floor(lines / 10) + 1;
+  if (toBeDelRow.length > 0) {
+    animeLinee = true;
+    frameAniLinee = 0;
+    return;
   }
 
   tetrimino = avantiUnAltro();
+  puoSalvare = true;
 }
 
 function getGhostPosition() {
@@ -112,6 +108,127 @@ function getGhostPosition() {
     }
 
     return ghostRow;
+}
+
+function aniLinee() {
+  frameAniLinee++;
+
+  const blinkgone = Math.floor(frameAniLinee / 5) % 2 === 0;
+
+  toBeDelRow.forEach(row=> {
+    for (let col = 0; col < COLS; col++) {
+      ctx.fillStyle = blinkgone ? colors[playfield[row][col]] : "white";
+      ctx.fillRect(col * grid, row * grid, grid-1, grid-1);
+    }
+  });
+
+  if (frameAniLinee > 20) {
+    pulisciDing();
+    animeLinee = false;
+  }
+}
+
+function pulisciDing() {
+  let rainKuria = toBeDelRow.length;
+
+  toBeDelRow.forEach(row => {
+    for (let r = row; r > 0; r--) {
+      for (let c = 0; c < COLS; c++) {
+        playfield[r][c] = playfield[r - 1][c];
+      }
+    }
+
+    for (let c = 0; c < COLS; c++) {
+      playfield[0][c] = 0;
+    }
+  });
+
+  const linesCleared = rainKuria;
+
+  if (linesCleared >= 5) {
+    showPopup("TETRIS!");
+  }
+
+  let empty = playfield.every(row => row.every(cell => cell === 0));
+
+  if (empty) {
+    showPopup("ALL CLEAR!");
+  }
+
+  const points = [0, 100, 300, 500, 800];
+  score += points[rainKuria] * level;
+  lines += rainKuria;
+  level = Math.floor(lines / 10) + 1;
+
+  tetrimino = avantiUnAltro();
+  puoSalvare = true;
+}
+
+
+function showPopup(text) {
+  popupText = text;
+  popupTimer = 60;
+}
+
+function drawPezzoMinicicciolo(matrix, offsetX, offsetY) {
+  const size = 16;
+
+  for (let row = 0; row < matrix.length; row++) {
+    for (let col = 0; col < matrix[row].length; col++) {
+      if (matrix[row][col]) {
+        ctx.fillRect(
+          offsetX + col * size,
+          offsetY + row * size,
+          size - 1,
+          size - 1
+        );
+      }
+    }
+  }
+}
+
+function drawAnteprima() {
+  const ante = pezzoSequence.slice(-5);
+
+  ante.forEach((name, i) => {
+    ctx.fillStyle = colors[name];
+    drawPezzoMinicicciolo(tetrimini[name], COLS * grid + 20, 50 + i * 70);
+  });
+}
+
+function salva() {
+  if (!puoSalvare) return;
+
+  if (pezzoSalvato === null) {
+    pezzoSalvato = {
+      name: tetrimino.name,
+      matrix: tetrimini[tetrimino.name],
+    };
+    tetrimino = avantiUnAltro();
+  } else {
+    const temp = pezzoSalvato;
+
+    pezzoSalvato = {
+      name: tetrimino.name,
+      matrix: tetrimini[tetrimino.name],
+    };
+
+    tetrimino = {
+      name: temp.name,
+      matrix: tetrimini[temp.name],
+      row: temp.name === 'I' ? -1 : -2,
+      col: Math.floor(playfield[0].length / 2 - tetrimini[temp.name][0].length / 2)
+    };
+  }
+
+  puoSalvare = false;
+}
+
+function drawPezzoSalvato() {
+  if (!pezzoSalvato) return;
+
+  ctx.fillStyle = colors[pezzoSalvato.name];
+  drawPezzoMinicicciolo(tetrimini[pezzoSalvato.name], COLS * grid + 20, 300);
 }
 
 function showGameOver() {
@@ -128,6 +245,23 @@ function showGameOver() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+}
+
+function resetGame() {
+  score = 0;
+  level = 1;
+  lines = 0;
+
+  playfield.forEach(row => row.fill(0));
+
+  pezzoSequence.length = 0;
+  creaTetrimini();
+
+  tetrimino = avantiUnAltro();
+
+  gameOver = false;
+  cancelAnimationFrame(rAF);
+  rAF = requestAnimationFrame(loop);
 }
 
 function drawGrid() {
@@ -218,11 +352,19 @@ let count = 0;
 let tetrimino = avantiUnAltro();
 let rAF = null;
 let gameOver = false;
+let toBeDelRow = [];
+let animeLinee = false;
+let frameAniLinee = 0;
+let pezzoSalvato = null;
+let puoSalvare = true;
+let showCredits = false;
 function loop() {
   rAF = requestAnimationFrame(loop);
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   drawGrid();
+  drawAnteprima();
+  drawPezzoSalvato();
 
   for (let row = 0; row < 20; row++) {
     for (let col = 0; col < 10; col++) {
@@ -232,6 +374,11 @@ function loop() {
         ctx.fillRect(col * grid, row * grid, grid-1, grid-1);
       }
     }
+  }
+
+  if (animeLinee) {
+    aniLinee();
+    return;
   }
 
   if (tetrimino) {
@@ -291,6 +438,32 @@ function loop() {
     }
   }
 
+if (popupTimer > 0) {
+  popupTimer--;
+
+  ctx.save();
+  ctx.fillStyle = "white";
+  ctx.font = "40px monospace";
+  ctx.textAlign = "center";
+  ctx.globalAlpha = popupTimer / 60;
+
+  ctx.fillText(popupText, canvas.width / 2, canvas.height / 2);
+
+  ctx.restore();
+}
+
+if (showCredits) {
+  ctx.save();
+  ctx.fillStyle = "white";
+  ctx.font = "20px monospace";
+  ctx.textAlign = "center";
+
+  ctx.fillText("Tetris remake", canvas.width / 2, canvas.height / 2);
+  ctx.fillText("da Luigi Cafà e Filippo Vella 3D", canvas.width / 2, canvas.height / 2 + 30);
+
+  ctx.restore();
+}
+
   ctx.fillStyle = "white";
   ctx.font = "16px monospace";
   ctx.fillText("Score: " + score, 10, 20);
@@ -333,6 +506,10 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault();
     tetrimino.row = getGhostPosition();
     piazzaBlocco();
+  }
+
+  if (e.key === 'c' || e.key === 'C') {
+    salva();
   }
 });
 
