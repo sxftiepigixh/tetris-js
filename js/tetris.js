@@ -130,6 +130,24 @@ function showGameOver() {
     ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
 }
 
+function drawGrid() {
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1;
+
+  for (let col = 0; col <= COLS; col++) {
+    ctx.beginPath();
+    ctx.moveTo(col * grid, 0);
+    ctx.lineTo(col * grid, ROWS * grid);
+    ctx.stroke();
+  }
+
+  for (let row = 0; row <= ROWS; row++) {
+    ctx.beginPath();
+    ctx.moveTo(0, row * grid);
+    ctx.lineTo(COLS * grid, row * grid);
+    ctx.stroke();
+  }
+}
 
 const canvas = document.getElementById("ilcoso");
 const ctx = canvas.getContext("2d");
@@ -203,6 +221,8 @@ let gameOver = false;
 function loop() {
   rAF = requestAnimationFrame(loop);
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawGrid();
 
   for (let row = 0; row < 20; row++) {
     for (let col = 0; col < 10; col++) {
